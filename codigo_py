@@ -1,0 +1,123 @@
+import mysql.connector
+
+# Configuração da conexão com o banco
+config = {
+    'host': 'localhost',
+    'user': 'root',
+    'password': 'M.acaco12',  # Troque pela sua senha real
+    'database': 'lora_do_peixe'
+}
+
+# Lista de bairros válidos
+bairros = {
+    "1": "vermelha_fatura",
+    "2": "mafua_fatura",
+    "3": "parque_piaui1_fatura",
+    "4": "parque_piaui2_fatura"
+}
+
+# Coleta os dados gerais (bairro, data, dia da semana)
+def coletar_dados_gerais():
+    print("\n=== FECHAMENTO DE CAIXA E INSERÇÃO DE FATURA ===")
+
+    print("Escolha o bairro:")
+    for k, v in bairros.items():
+        print(f"{k} - {v.replace('_fatura', '').replace('_', ' ').title()}")
+
+    escolha = input("Digite o número do bairro: ")
+    tabela = bairros.get(escolha)
+
+    if not tabela:
+        print("❌ Bairro inválido.")
+        return None, None, None
+
+    data = input("Data (YYYY-MM-DD): ")
+    dia_semana = input("Dia da semana (Sexta, Sábado, Domingo): ")
+
+    return tabela, data, dia_semana
+
+# Coleta as vendas e calcula totais
+def coletar_vendas(data, dia_semana):
+    total_geral = 0
+    vendas = []
+
+    while True:
+        peixe = input('\nNome do peixe (ou digite "fim" para encerrar): ')
+        if peixe.lower() == 'fim':
+            break
+
+        quant_comp = float(input('Quantidade de peixe comprada (kg): '))
+        sobra = float(input('Valor da sobra (kg): '))
+        quant_vend = quant_comp - sobra
+        preco_comprado = float(input('Preço comprado (R$): '))
+        preco_venda = float(input('Preço vendido por kg (R$): '))
+        total = quant_vend * preco_venda
+
+        print(f'{peixe}: {quant_comp:.2f}kg - {sobra:.2f}kg = {quant_vend:.2f}kg x R${preco_venda:.2f} = R${total:.2f}')
+
+        total_geral += total
+        vendas.append((
+            data, dia_semana, peixe, quant_comp,
+            preco_comprado, quant_vend, preco_venda
+        ))
+
+    return vendas, total_geral
+
+# Fecha o caixa com as entradas
+def fechamento_caixa(total_geral):
+    print(f'\n💰 Valor total arrecadado com as vendas: R${total_geral:.2f}')
+    print("\n=== INSERÇÃO DE GASTOS ===")
+
+    despesas = float(input('Outras despesas: R$ '))
+    esp = float(input('Espécie recebida: R$ '))
+    cart = float(input('Cartão recebido: R$ '))
+    pix = float(input('Pix recebido: R$ '))
+
+    total_despesas = despesas + esp + cart + pix
+    print(f'\n🧾 Total declarado: R${total_despesas:.2f}')
+
+    if total_despesas == total_geral:
+        print('✅ Bateu certinho!')
+    elif total_despesas < total_geral:
+        falta = total_geral - total_despesas
+        print(f'⚠️ Não bateu. Faltou R${falta:.2f}')
+    else:
+        passou = total_despesas - total_geral
+        print(f'⚠️ Não bateu. Passou R${passou:.2f}')
+
+# Insere cada venda no banco de dados
+def inserir_vendas_no_banco(tabela, vendas):
+    try:
+        conn = mysql.connector.connect(**config)
+        cursor = conn.cursor()
+
+        sql = f"""
+        INSERT INTO {tabela} (
+            data, dia_semana, tipo_peixe,
+            quantidade_kg, preco_comprado,
+            quantidade_kg_vendida, preco_venda
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """
+
+        cursor.executemany(sql, vendas)
+        conn.commit()
+        print(f'\n✅ {len(vendas)} vendas inseridas com sucesso no banco!')
+
+    except mysql.connector.Error as err:
+        print("Erro ao inserir:", err)
+    finally:
+        if conn.is_connected():
+            cursor.close()
+            conn.close()
+
+# Execução principal
+if __name__ == "__main__":
+    tabela, data, dia_semana = coletar_dados_gerais()
+
+    if tabela:
+        vendas, total_geral = coletar_vendas(data, dia_semana)
+        if vendas:
+            fechamento_caixa(total_geral)
+            inserir_vendas_no_banco(tabela, vendas)
+        else:
+            print("Nenhuma venda registrada.")
