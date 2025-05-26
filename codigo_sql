@@ -1,0 +1,124 @@
+-- 🔹 CRIAÇÃO DO BANCO
+DROP DATABASE IF EXISTS lora_do_peixe;
+CREATE DATABASE lora_do_peixe;
+USE lora_do_peixe;
+
+-- 🔹 TABELA GERAL
+CREATE TABLE faturas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    data DATE NOT NULL,
+    dia_semana ENUM('Sexta', 'Sábado', 'Domingo') NOT NULL,
+    bairro ENUM('Vermelha', 'Mafua', 'Parque Piauí 1', 'Parque Piauí 2') NOT NULL,
+    tipo_peixe ENUM('Tilápia', 'Tambaqui', 'Branquinha', 'Piabas') NOT NULL,
+    quantidade_kg DECIMAL(10,2) NOT NULL,
+    preco_comprado DECIMAL(10,2),
+    quantidade_kg_vendida DECIMAL(10,2),
+    preco_venda DECIMAL(10,2),
+    custo_total DECIMAL(10,2) AS (quantidade_kg * preco_comprado) STORED,
+    receita_total DECIMAL(10,2) AS (quantidade_kg_vendida * preco_venda) STORED,
+    lucro DECIMAL(10,2) AS (receita_total - custo_total) STORED,
+    sobra DECIMAL(10,2) AS (quantidade_kg - quantidade_kg_vendida) STORED
+);
+
+-- 🔹 TABELAS POR BAIRRO
+
+-- Vermelha
+CREATE TABLE vermelha_fatura LIKE faturas;
+ALTER TABLE vermelha_fatura MODIFY bairro ENUM('Vermelha') NOT NULL;
+
+-- Mafua
+CREATE TABLE mafua_fatura LIKE faturas;
+ALTER TABLE mafua_fatura MODIFY bairro ENUM('Mafua') NOT NULL;
+
+-- Parque Piauí 1
+CREATE TABLE parque_piaui1_fatura LIKE faturas;
+ALTER TABLE parque_piaui1_fatura MODIFY bairro ENUM('Parque Piauí 1') NOT NULL;
+
+-- Parque Piauí 2
+CREATE TABLE parque_piaui2_fatura LIKE faturas;
+ALTER TABLE parque_piaui2_fatura MODIFY bairro ENUM('Parque Piauí 2') NOT NULL;
+
+-- 🔹 TRIGGERS
+
+DELIMITER //
+
+-- Trigger: Vermelha
+CREATE TRIGGER tr_vermelha_to_faturas
+AFTER INSERT ON vermelha_fatura
+FOR EACH ROW
+BEGIN
+    INSERT INTO faturas (
+        data, dia_semana, bairro, tipo_peixe,
+        quantidade_kg, preco_comprado,
+        quantidade_kg_vendida, preco_venda
+    ) VALUES (
+        NEW.data, NEW.dia_semana, 'Vermelha', NEW.tipo_peixe,
+        NEW.quantidade_kg, NEW.preco_comprado,
+        NEW.quantidade_kg_vendida, NEW.preco_venda
+    );
+END;
+//
+
+-- Trigger: Mafua
+CREATE TRIGGER tr_mafua_to_faturas
+AFTER INSERT ON mafua_fatura
+FOR EACH ROW
+BEGIN
+    INSERT INTO faturas (
+        data, dia_semana, bairro, tipo_peixe,
+        quantidade_kg, preco_comprado,
+        quantidade_kg_vendida, preco_venda
+    ) VALUES (
+        NEW.data, NEW.dia_semana, 'Mafua', NEW.tipo_peixe,
+        NEW.quantidade_kg, NEW.preco_comprado,
+        NEW.quantidade_kg_vendida, NEW.preco_venda
+    );
+END;
+//
+
+-- Trigger: Parque Piauí 1
+CREATE TRIGGER tr_piaui1_to_faturas
+AFTER INSERT ON parque_piaui1_fatura
+FOR EACH ROW
+BEGIN
+    INSERT INTO faturas (
+        data, dia_semana, bairro, tipo_peixe,
+        quantidade_kg, preco_comprado,
+        quantidade_kg_vendida, preco_venda
+    ) VALUES (
+        NEW.data, NEW.dia_semana, 'Parque Piauí 1', NEW.tipo_peixe,
+        NEW.quantidade_kg, NEW.preco_comprado,
+        NEW.quantidade_kg_vendida, NEW.preco_venda
+    );
+END;
+//
+
+-- Trigger: Parque Piauí 2
+CREATE TRIGGER tr_piaui2_to_faturas
+AFTER INSERT ON parque_piaui2_fatura
+FOR EACH ROW
+BEGIN
+    INSERT INTO faturas (
+        data, dia_semana, bairro, tipo_peixe,
+        quantidade_kg, preco_comprado,
+        quantidade_kg_vendida, preco_venda
+    ) VALUES (
+        NEW.data, NEW.dia_semana, 'Parque Piauí 2', NEW.tipo_peixe,
+        NEW.quantidade_kg, NEW.preco_comprado,
+        NEW.quantidade_kg_vendida, NEW.preco_venda
+    );
+END;
+//
+
+DELIMITER ;
+
+-- 🔹 EXEMPLO DE INSERÇÃO
+-- INSERT INTO vermelha_fatura (
+--     data, dia_semana, tipo_peixe, quantidade_kg,
+--     preco_comprado, quantidade_kg_vendida, preco_venda
+-- ) VALUES (
+--     '2025-05-16', 'Sábado', 'Tilápia', 25.00,
+--     10.00, 20.00, 15.00
+-- );
+
+-- Isso inserirá automaticamente também na tabela `faturas`
